@@ -1,0 +1,23 @@
+{
+  "name": "AffogatoCafe",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "Affogato": {
+        "$path": "src/shared"
+      }
+    },
+    "ServerScriptService": {
+      "AffogatoServer": {
+        "$path": "src/server"
+      }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "AffogatoClient": {
+          "$path": "src/client"
+        }
+      }
+    }
+  }
+}
