@@ -8,6 +8,7 @@ local Config = {
 	MaximumQueueSize = 6,
 	BaseWalkSpeed = 16,
 	DataStoreName = "AffogatoCafe_Phase1_v1",
+	BaseStaffSlots = 3,
 }
 
 Config.DayPeriods = {

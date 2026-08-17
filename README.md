@@ -1,6 +1,6 @@
 # Affogato Café
 
-A server-authoritative Roblox café and bakery prototype implementing the first two phases of the game roadmap: the core café loop and interactive preparation.
+A server-authoritative Roblox café and bakery prototype implementing all eight roadmap phases: core service, interactive preparation, stock and suppliers, upgrades, staff automation, decorating, reputation/events, progression, resilient saving, and optional monetization hooks.
 
 ## What is playable
 
@@ -11,6 +11,12 @@ A server-authoritative Roblox café and bakery prototype implementing the first 
 - Coffee, latte, iced latte, two signature affogatos, cookies, croissants, and muffins can be prepared.
 - Preparation uses accessible click, rapid-click, hold/release, and timing-meter interactions. The server validates recipe order, station, action rate, bake time, rewards, and persistence.
 - The café, stations, queue, HUD, order tickets, tray, notifications, and preparation interface are generated at runtime, so the repository does not require a binary place file.
+- Ingredients are finite, supplier quality affects food quality, and timed Budget, Local, and Premium deliveries arrive as visible café boxes.
+- Equipment and player upgrades improve espresso quality, baking speed, checkout scoring, movement, carrying, and interaction tolerance.
+- Ava the Barista, Marco the Baker, and Mia the Server can be hired and trained; they automate only their specialties and charge wages each café day.
+- Grid-snapped build mode supports buying, placing, moving, rotating, storing, and selling themed furniture, with ambience bonuses and five café expansions.
+- A 1–5 star reputation, fame titles, customer personalities, special visitors, contextual reactions, and timed café events change traffic and demand.
+- Daily challenges, forgiving seven-day login streaks, level unlock previews, menu selection, settings, backup saves, and disabled-by-default Marketplace hooks support long-term progression.
 
 ## Run in Roblox Studio
 
@@ -27,6 +33,7 @@ The runtime creates four stations:
 - **Affogato Station** — vanilla and chocolate affogatos.
 - **Bakery Station** — cookies, croissants, and muffins.
 - **Serve Station** — submits prepared tray items to the first customer.
+- **Management Station** — opens inventory, suppliers, equipment, player upgrades, staff, build mode, expansions, challenges, menu selection, and settings.
 
 Walk to a station and use its proximity prompt. Prepare every item shown on the first ticket, then submit the tray at the Serve Station.
 
@@ -34,18 +41,18 @@ Walk to a station and use its proximity prompt. Prepare every item shown on the 
 
 ```text
 src/shared/       Recipes, tuning, and remote names
-src/server/       Profiles, day cycle, queue/orders, preparation, world builder
+src/server/       Profiles, economy, build, reputation, events, progression, monetization, staff, orders, preparation, world
 src/client/       HUD, station recipe picker, preparation interactions
 default.project.json
 ```
 
 ## Architecture and security
 
-The client only presents interactions and reports a bounded quality score. Recipe selection, station matching, sequence advancement, minimum action interval, bake delay, prepared inventory, exact order matching, payouts, XP, and saved profiles are owned by the server. This is an intentionally compact vertical slice; Phase 3 should add ingredient inventory and supplier costs before the economy is balanced for release.
+The client only presents interactions and reports a bounded quality score. Recipe selection, ingredient spending, purchases, station matching, sequence advancement, minimum action interval, bake delay, prepared inventory, exact order matching, payouts, staff work, XP, and saved profiles are owned by the server. Supplier product IDs and all purchase prices are re-resolved from shared server data rather than trusted from client payloads.
 
 ## Next implementation steps
 
-1. Add server-owned ingredient inventory and suppliers (Phase 3).
-2. Replace generated blockout geometry and customers with authored café/NPC assets and pathfinding.
-3. Add multiplayer café ownership or isolated player plots before supporting multiple simultaneous owners in one server.
-4. Add automated TestEZ specifications once the experience's package manager is selected.
+1. Replace generated blockout geometry and customers with authored café, furniture, NPC, vehicle, and animation assets.
+2. Add isolated player plots before supporting multiple simultaneous café owners in one server.
+3. Replace the zero Marketplace IDs in `src/shared/Meta.lua` with IDs owned by the published experience and configure product art/pricing in Creator Hub.
+4. Expand automated service tests with a Roblox-aware test runner and perform multiplayer/DataStore/receipt smoke tests in Studio.
