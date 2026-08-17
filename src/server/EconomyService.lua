@@ -10,6 +10,7 @@ local EconomyService = {}
 EconomyService.Changed = Instance.new("BindableEvent")
 local profiles
 local worldService
+local eventService
 
 local function profileFor(player: Player)
 	return profiles.Get(player)
@@ -28,10 +29,11 @@ function EconomyService.OrderSupply(player: Player, supplierId: string, ingredie
 	local product = supplier and supplier.products[ingredientId]
 	if not profile or not supplier or not product then return false, "That supplier item does not exist." end
 	if profile.level < supplier.unlockLevel then return false, `Reach level {supplier.unlockLevel} to use this supplier.` end
-	if not EconomyService.Spend(player, product.cost) then return false, "You do not have enough cash." end
+	local cost = math.floor(product.cost * (eventService and eventService.GetModifier("supplierDiscount") or 1) + 0.5)
+	if not EconomyService.Spend(player, cost) then return false, "You do not have enough cash." end
 	table.insert(profile.pendingDeliveries, {
 		ingredientId = ingredientId, amount = product.amount, quality = supplier.quality,
-		arrivesAt = os.time() + supplier.deliverySeconds, supplier = supplier.name,
+		arrivesAt = os.time() + supplier.deliverySeconds * (eventService and eventService.GetModifier("deliveryMultiplier") or 1), supplier = supplier.name,
 	})
 	EconomyService.Changed:Fire(player)
 	return true, `{Economy.Ingredients[ingredientId].name} ordered from {supplier.name}.`
@@ -118,7 +120,8 @@ function EconomyService.HireStaff(player: Player, staffId: string): (boolean, st
 	if profile.staff[staffId] then return false, "That employee already works here." end
 	local count = 0
 	for _ in profile.staff do count += 1 end
-	if count >= Config.BaseStaffSlots then return false, "All employee slots are full." end
+	local slots = Config.BaseStaffSlots + (profile.purchasedGamepasses.ExtraEmployeeSlot and 1 or 0)
+	if count >= slots then return false, "All employee slots are full." end
 	if not EconomyService.Spend(player, candidate.hireCost) then return false, "You do not have enough cash." end
 	profile.staff[staffId] = { training = 0 }
 	EconomyService.Changed:Fire(player)
@@ -156,9 +159,10 @@ function EconomyService.ApplyCharacter(player: Player)
 	if profile and humanoid then humanoid.WalkSpeed = Config.BaseWalkSpeed * (1 + 0.05 * profile.playerUpgrades.Movement) end
 end
 
-function EconomyService.Start(profileService, world)
+function EconomyService.Start(profileService, world, events)
 	profiles = profileService
 	worldService = world
+	eventService = events
 	Players.PlayerAdded:Connect(function(player)
 		player.CharacterAdded:Connect(function() task.wait() EconomyService.ApplyCharacter(player) end)
 	end)

@@ -13,6 +13,7 @@ assert(totalDuration >= 12 * 60 and totalDuration <= 15 * 60, "café day must la
 for _, recipe in Recipes.List do
 	assert(recipe.price > 0, `{recipe.id} must have a positive price`)
 	assert(#recipe.steps > 0, `{recipe.id} must have preparation steps`)
+	assert((recipe.unlockLevel or 1) >= 1, `{recipe.id} has an invalid unlock level`)
 	for ingredientId, amount in recipe.ingredients do
 		assert(Economy.Ingredients[ingredientId], `{recipe.id} references unknown ingredient {ingredientId}`)
 		assert(amount > 0 and amount % 1 == 0, `{recipe.id} ingredient costs must be positive integers`)

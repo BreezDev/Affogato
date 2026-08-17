@@ -8,6 +8,7 @@ local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 local shared = ReplicatedStorage:WaitForChild("Affogato")
 local Recipes = require(shared.Recipes)
+local Economy = require(shared.Economy)
 local RemoteNames = require(shared.Remotes)
 local remotes = ReplicatedStorage:WaitForChild(RemoteNames.Folder)
 local stateRemote = remotes:WaitForChild(RemoteNames.State) :: RemoteEvent
@@ -43,7 +44,7 @@ local function label(parent: Instance, name: string, size: UDim2, position: UDim
 	return value
 end
 
-local top = label(gui, "Status", UDim2.fromOffset(500, 52), UDim2.new(0.5, -250, 0, 18), "Loading café…", 18)
+local top = label(gui, "Status", UDim2.fromOffset(650, 70), UDim2.new(0.5, -325, 0, 18), "Loading café…", 17)
 local ticket = label(gui, "Ticket", UDim2.fromOffset(290, 250), UDim2.new(1, -310, 0, 88), "Waiting for customers…", 17)
 ticket.TextYAlignment = Enum.TextYAlignment.Top
 ticket.TextXAlignment = Enum.TextXAlignment.Left
@@ -86,6 +87,10 @@ Instance.new("UICorner", close).CornerRadius = UDim.new(1, 0)
 
 local connections: { RBXScriptConnection } = {}
 local renderStep: (any) -> ()
+local latestState: any = nil
+local interactionLevel = 0
+local placementItem: string? = nil
+local movingPlacement: string? = nil
 local function clearContent()
 	for _, connection in connections do connection:Disconnect() end
 	table.clear(connections)
@@ -119,7 +124,7 @@ renderStep = function(stepData)
 
 	if rapidSteps[stepData.step] then
 		local clicks = 0
-		local needed = 8
+		local needed = math.max(4, 8 - interactionLevel)
 		local button = Instance.new("TextButton")
 		button.Size = UDim2.fromOffset(220, 100)
 		button.Position = UDim2.new(0.5, -110, 0.5, -30)
@@ -142,8 +147,9 @@ renderStep = function(stepData)
 		track.BackgroundColor3 = Color3.fromRGB(220, 203, 181)
 		track.Parent = content
 		local target = Instance.new("Frame")
-		target.Size = UDim2.new(0.22, 0, 1, 0)
-		target.Position = UDim2.new(0.39, 0, 0, 0)
+		local targetWidth = math.min(0.42, 0.22 + interactionLevel * 0.035)
+		target.Size = UDim2.new(targetWidth, 0, 1, 0)
+		target.Position = UDim2.new(0.5 - targetWidth / 2, 0, 0, 0)
 		target.BackgroundColor3 = Color3.fromRGB(135, 190, 131)
 		target.Parent = track
 		local marker = Instance.new("Frame")
@@ -152,8 +158,9 @@ renderStep = function(stepData)
 		marker.BackgroundColor3 = brown
 		marker.Parent = track
 		local started = os.clock()
+		local meterSpeed = latestState and latestState.event and latestState.event.name == "Espresso Machine Problem" and 2.1 or 3
 		table.insert(connections, RunService.RenderStepped:Connect(function()
-			local alpha = (math.sin((os.clock() - started) * 3) + 1) / 2
+			local alpha = (math.sin((os.clock() - started) * meterSpeed) + 1) / 2
 			marker.Position = UDim2.new(alpha, 0, 0.5, 0)
 		end))
 		local stop = Instance.new("TextButton")
@@ -196,6 +203,159 @@ renderStep = function(stepData)
 	end
 end
 
+local function managementList(heading: string, rows: { any }, render: (any) -> (string, string?, any?))
+	clearContent()
+	title.Text = heading
+	local scroll = Instance.new("ScrollingFrame")
+	scroll.Size = UDim2.fromScale(1, 1)
+	scroll.BackgroundTransparency = 1
+	scroll.BorderSizePixel = 0
+	scroll.ScrollBarThickness = 7
+	scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	scroll.CanvasSize = UDim2.new()
+	scroll.Parent = content
+	local layout = Instance.new("UIListLayout")
+	layout.Padding = UDim.new(0, 7)
+	layout.Parent = scroll
+	for _, row in rows do
+		local text, action, payload = render(row)
+		local button = Instance.new("TextButton")
+		button.Size = UDim2.new(1, -10, 0, 52)
+		button.BackgroundColor3 = action and Color3.fromRGB(239, 216, 190) or Color3.fromRGB(235, 229, 216)
+		button.TextColor3 = brown
+		button.Font = Enum.Font.GothamMedium
+		button.TextSize = 15
+		button.TextWrapped = true
+		button.Text = text
+		button.AutoButtonColor = action ~= nil
+		button.Parent = scroll
+		Instance.new("UICorner", button).CornerRadius = UDim.new(0, 8)
+		if action then
+			table.insert(connections, button.Activated:Connect(function()
+				if action == "LocalPlace" then
+					placementItem = tostring(payload)
+					movingPlacement = nil
+					modal.Visible = false
+					showToast("Build Mode: click a floor grid cell to place. Press Esc to cancel.", true)
+				elseif action == "LocalMove" then
+					movingPlacement = tostring(payload)
+					placementItem = nil
+					modal.Visible = false
+					showToast("Build Mode: click a new floor grid cell.", true)
+				else actionRemote:InvokeServer(action, payload) end
+			end))
+		end
+	end
+end
+
+local function openManagement()
+	clearContent()
+	modal.Visible = true
+	title.Text = "Café Management"
+	local categoryScroll = Instance.new("ScrollingFrame")
+	categoryScroll.Size = UDim2.fromScale(1, 1)
+	categoryScroll.BackgroundTransparency = 1
+	categoryScroll.BorderSizePixel = 0
+	categoryScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	categoryScroll.CanvasSize = UDim2.new()
+	categoryScroll.Parent = content
+	local layout = Instance.new("UIGridLayout")
+	layout.CellSize = UDim2.fromOffset(225, 75)
+	layout.CellPadding = UDim2.fromOffset(10, 10)
+	layout.Parent = categoryScroll
+	local function category(name: string, callback: () -> ())
+		local button = Instance.new("TextButton")
+		button.BackgroundColor3 = Color3.fromRGB(239, 216, 190)
+		button.TextColor3 = brown
+		button.TextSize = 19
+		button.Font = Enum.Font.GothamBold
+		button.Text = name
+		button.Parent = categoryScroll
+		Instance.new("UICorner", button).CornerRadius = UDim.new(0, 10)
+		table.insert(connections, button.Activated:Connect(callback))
+	end
+	category("📦 Inventory", function()
+		local rows = table.clone(latestState.inventory)
+		for _, delivery in latestState.deliveries do table.insert(rows, { delivery = true, name = delivery.name, arrivesIn = delivery.arrivesIn }) end
+		managementList("Inventory & Deliveries", rows, function(row)
+			if row.delivery then return `🚚 {row.name} arrives in {row.arrivesIn}s`, nil, nil end
+			return `{row.name}: {row.amount}  •  {math.floor(row.quality * 100)}% quality`, nil, nil
+		end)
+	end)
+	category("🚚 Suppliers", function()
+		local rows = {}
+		for supplierId, supplier in Economy.Suppliers do
+			for ingredientId, product in supplier.products do
+				table.insert(rows, { supplierId = supplierId, ingredientId = ingredientId, supplier = supplier, product = product })
+			end
+		end
+		managementList("Supplier Store", rows, function(row)
+			return `{row.supplier.name} · {Economy.Ingredients[row.ingredientId].name} +{row.product.amount}  •  ${row.product.cost}  •  Lv.{row.supplier.unlockLevel}`, "OrderSupply", { supplierId = row.supplierId, ingredientId = row.ingredientId }
+		end)
+	end)
+	category("⚙ Equipment", function()
+		managementList("Equipment Upgrades", latestState.equipment, function(row)
+			if not row.cost then return `{row.name}: {row.tier} (MAX)`, nil, nil end
+			return `{row.name}: {row.tier} → {row.nextName}  •  ${row.cost}`, "UpgradeEquipment", row.id
+		end)
+	end)
+	category("🏃 Player Skills", function()
+		managementList("Player Upgrades", latestState.upgrades, function(row)
+			if not row.cost then return `{row.name}: Lv.{row.level} (MAX)`, nil, nil end
+			return `{row.name}: Lv.{row.level} → {row.level + 1}  •  ${row.cost}`, "UpgradePlayer", row.id
+		end)
+	end)
+	category("👥 Staff", function()
+		managementList("Hire & Train Staff", latestState.staff, function(row)
+			if not row.hired then return `{row.name} · {row.role}  •  Hire ${row.hireCost} · Wage ${row.wage}/day`, "HireStaff", row.id end
+			if not row.trainingCost then return `{row.name} · {row.role} · Training Lv.{row.training} (MAX) · ${row.wage}/day`, nil, nil end
+			return `{row.name} · {row.role} · Training Lv.{row.training}  •  Train ${row.trainingCost}`, "TrainStaff", row.id
+		end)
+	end)
+	category("🪑 Furniture", function()
+		local rows = {}
+		for _, row in latestState.furniture do
+			table.insert(rows, { text = `BUY · {row.name} [{row.theme}] +{row.ambience} ambience · ${row.cost}`, action = "BuyFurniture", payload = row.id })
+			if row.owned > 0 then table.insert(rows, { text = `PLACE · {row.name} · {row.owned} stored`, action = "LocalPlace", payload = row.id }) end
+		end
+		for _, placed in latestState.placements do
+			table.insert(rows, { text = `MOVE · {placed.name} ({placed.x}, {placed.z})`, action = "LocalMove", payload = placed.id })
+			table.insert(rows, { text = `ROTATE · {placed.name} ({placed.rotation}°)`, action = "EditFurniture", payload = { edit = "Rotate", placementId = placed.id } })
+			table.insert(rows, { text = `STORE · {placed.name}`, action = "EditFurniture", payload = { edit = "Store", placementId = placed.id } })
+			table.insert(rows, { text = `SELL · {placed.name} (50% refund)`, action = "EditFurniture", payload = { edit = "Sell", placementId = placed.id } })
+		end
+		managementList(`Build Mode · Ambience {latestState.ambience}`, rows, function(row) return row.text, row.action, row.payload end)
+	end)
+	category("🏠 Expansion", function()
+		local rows = { { current = true } }
+		managementList("Café Expansion", rows, function()
+			if latestState.nextExpansion then return `{latestState.expansion} → {latestState.nextExpansion.name} · ${latestState.nextExpansion.cost}`, "ExpandCafe", true end
+			return `{latestState.expansion} · Fully expanded`, nil, nil
+		end)
+	end)
+	category("⭐ Challenges", function()
+		local unlockText = latestState.nextUnlock and ` · Next: Lv.{latestState.nextUnlock.level} {latestState.nextUnlock.name}` or " · All level rewards unlocked"
+		managementList(`Daily Challenges · Login Day {latestState.loginStreak}{unlockText}`, latestState.challenges, function(row)
+			local text = `{row.description} · {row.progress}/{row.target} · ${row.rewardCash} + {row.rewardXP} XP`
+			if row.claimed then return text .. " · CLAIMED", nil, nil end
+			return text, row.progress >= row.target and "ClaimChallenge" or nil, row.id
+		end)
+	end)
+	category("📋 Menu", function()
+		local active = {} for _, id in latestState.menu do active[id] = true end
+		managementList("Café Menu", Recipes.List, function(row)
+			return `{active[row.id] and "✓" or "○"} {row.displayName} · ${row.price}`, "ToggleMenuItem", row.id
+		end)
+	end)
+	category("⚙ Settings", function()
+		local rows = {}
+		for key, value in latestState.settings do table.insert(rows, { key = key, value = value }) end
+		managementList("Settings", rows, function(row)
+			return `{row.key}: {row.value and "ON" or "OFF"}`, "UpdateSetting", { key = row.key, value = not row.value }
+		end)
+	end)
+end
+
 local function openStation(station: string)
 	clearContent()
 	modal.Visible = true
@@ -211,7 +371,9 @@ local function openStation(station: string)
 			button.TextColor3 = brown
 			button.Font = Enum.Font.GothamMedium
 			button.TextSize = 18
-			button.Text = `{recipe.displayName}  •  ${recipe.price}`
+			local locked = latestState and latestState.level < (recipe.unlockLevel or 1)
+			button.Text = locked and `🔒 Lv.{recipe.unlockLevel} · {recipe.displayName}` or `{recipe.displayName}  •  ${recipe.price}`
+			button.BackgroundColor3 = locked and Color3.fromRGB(210, 205, 198) or button.BackgroundColor3
 			button.Parent = content
 			Instance.new("UICorner", button).CornerRadius = UDim.new(0, 8)
 			table.insert(connections, button.Activated:Connect(function()
@@ -232,20 +394,48 @@ local function connectPrompt(prompt: ProximityPrompt)
 	if prompt:GetAttribute("AffogatoConnected") then return end
 	prompt:SetAttribute("AffogatoConnected", true)
 	prompt.Triggered:Connect(function()
+		local placementId = prompt:GetAttribute("BuildPlacementId")
+		if placementId and prompt:GetAttribute("OwnerUserId") == player.UserId then actionRemote:InvokeServer("EditFurniture", { edit = "Rotate", placementId = placementId }) return end
 		local stationPart = prompt.Parent
 		local station = stationPart and stationPart:GetAttribute("Station")
-		if station == "Serve" then actionRemote:InvokeServer("Serve") elseif station then openStation(station) end
+		if station == "Serve" then actionRemote:InvokeServer("Serve") elseif station == "Management" then openManagement() elseif station then openStation(station) end
 	end)
 end
+
+UserInputService.InputBegan:Connect(function(input, processed)
+	if input.KeyCode == Enum.KeyCode.Escape then placementItem = nil movingPlacement = nil return end
+	if processed or (not placementItem and not movingPlacement) then return end
+	if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
+	local camera = workspace.CurrentCamera
+	if not camera then return end
+	local position = UserInputService:GetMouseLocation()
+	local ray = camera:ViewportPointToRay(position.X, position.Y)
+	local result = workspace:Raycast(ray.Origin, ray.Direction * 500)
+	if not result then return end
+	local payload = { x = result.Position.X, z = result.Position.Z }
+	if placementItem then
+		payload.itemId = placementItem
+		actionRemote:InvokeServer("PlaceFurniture", payload)
+		placementItem = nil
+	else
+		payload.edit = "Move"
+		payload.placementId = movingPlacement
+		actionRemote:InvokeServer("EditFurniture", payload)
+		movingPlacement = nil
+	end
+end)
 
 for _, descendant in workspace:GetDescendants() do if descendant:IsA("ProximityPrompt") then connectPrompt(descendant) end end
 workspace.DescendantAdded:Connect(function(descendant) if descendant:IsA("ProximityPrompt") then connectPrompt(descendant) end end)
 
 local function renderState(state)
-	top.Text = `☕ Day {state.day} · {state.period} ({math.floor(state.timeLeft / 60)}:{state.timeLeft % 60 // 10}{state.timeLeft % 10})     ${state.cash} · Level {state.level} ({state.xp} XP)`
+	latestState = state
+	interactionLevel = state.interactionLevel or 0
+	local eventText = state.event and ` · ⚡ {state.event.name} {state.event.endsIn}s` or ""
+	top.Text = `☕ Day {state.day} · {state.period} · ⭐ {string.format("%.2f", state.reputation)} {state.fame} · ✿ {state.ambience}{eventText}\n${state.cash} · Level {state.level} ({state.xp} XP)`
 	local lines = { "<b>ORDER TICKETS</b>" }
 	for _, order in state.orders do
-		table.insert(lines, `\n<b>#{order.id}</b> · ☺ {order.happiness}%`)
+		table.insert(lines, `\n<b>#{order.id} · {order.customerType}</b> · ☺ {order.happiness}%`)
 		for _, item in order.items do table.insert(lines, `  • {item}`) end
 	end
 	if #state.orders == 0 then table.insert(lines, "\nNo customers waiting") end

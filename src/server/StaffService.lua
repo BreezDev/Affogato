@@ -39,8 +39,8 @@ local function work(player: Player, staffId: string, employee, candidate)
 	if candidate.role == "Server" then
 		local profile = profiles.Get(player)
 		local registerSpeed = Economy.Equipment.Register.tiers[profile.equipment.Register].speed
-		local success, message, cash, xp = orders.TryComplete(preparation.GetPrepared(player), registerSpeed)
-		if success then StaffService.CompletedOrder:Fire(player, message, cash, xp) end
+		local success, message, cash, xp, metrics = orders.TryComplete(preparation.GetPrepared(player), registerSpeed)
+		if success then StaffService.CompletedOrder:Fire(player, message, cash, xp, metrics) end
 		return
 	end
 	local recipeId = neededRecipe(player, candidate.role)
