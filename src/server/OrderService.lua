@@ -70,7 +70,7 @@ function OrderService.Spawn()
 	OrderService.Changed:Fire()
 end
 
-function OrderService.TryComplete(prepared: { any }, serviceSpeedMultiplier: number?): (boolean, string, number, number)
+function OrderService.TryComplete(prepared: { any }): (boolean, string, number, number)
 	local order = queue[1]
 	if not order then return false, "There is no customer waiting.", 0, 0 end
 	if #prepared < #order.items then return false, "Prepare every item on the ticket first.", 0, 0 end
@@ -90,7 +90,7 @@ function OrderService.TryComplete(prepared: { any }, serviceSpeedMultiplier: num
 		end
 	end
 	if accuracy == 0 then return false, "That is not the next customer's order.", 0, 0 end
-	local elapsed = (workspace:GetServerTimeNow() - order.createdAt) / (serviceSpeedMultiplier or 1)
+	local elapsed = workspace:GetServerTimeNow() - order.createdAt
 	local speed = math.clamp(1 - elapsed / order.patience, 0, 1)
 	local quality = qualityTotal / #order.items
 	local subtotal = 0

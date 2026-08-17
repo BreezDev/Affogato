@@ -8,7 +8,6 @@ local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 local shared = ReplicatedStorage:WaitForChild("Affogato")
 local Recipes = require(shared.Recipes)
-local Economy = require(shared.Economy)
 local RemoteNames = require(shared.Remotes)
 local remotes = ReplicatedStorage:WaitForChild(RemoteNames.Folder)
 local stateRemote = remotes:WaitForChild(RemoteNames.State) :: RemoteEvent
@@ -87,8 +86,6 @@ Instance.new("UICorner", close).CornerRadius = UDim.new(1, 0)
 
 local connections: { RBXScriptConnection } = {}
 local renderStep: (any) -> ()
-local latestState: any = nil
-local interactionLevel = 0
 local function clearContent()
 	for _, connection in connections do connection:Disconnect() end
 	table.clear(connections)
@@ -122,7 +119,7 @@ renderStep = function(stepData)
 
 	if rapidSteps[stepData.step] then
 		local clicks = 0
-		local needed = math.max(4, 8 - interactionLevel)
+		local needed = 8
 		local button = Instance.new("TextButton")
 		button.Size = UDim2.fromOffset(220, 100)
 		button.Position = UDim2.new(0.5, -110, 0.5, -30)
@@ -145,9 +142,8 @@ renderStep = function(stepData)
 		track.BackgroundColor3 = Color3.fromRGB(220, 203, 181)
 		track.Parent = content
 		local target = Instance.new("Frame")
-		local targetWidth = math.min(0.42, 0.22 + interactionLevel * 0.035)
-		target.Size = UDim2.new(targetWidth, 0, 1, 0)
-		target.Position = UDim2.new(0.5 - targetWidth / 2, 0, 0, 0)
+		target.Size = UDim2.new(0.22, 0, 1, 0)
+		target.Position = UDim2.new(0.39, 0, 0, 0)
 		target.BackgroundColor3 = Color3.fromRGB(135, 190, 131)
 		target.Parent = track
 		local marker = Instance.new("Frame")
@@ -200,100 +196,6 @@ renderStep = function(stepData)
 	end
 end
 
-local function managementList(heading: string, rows: { any }, render: (any) -> (string, string?, any?))
-	clearContent()
-	title.Text = heading
-	local scroll = Instance.new("ScrollingFrame")
-	scroll.Size = UDim2.fromScale(1, 1)
-	scroll.BackgroundTransparency = 1
-	scroll.BorderSizePixel = 0
-	scroll.ScrollBarThickness = 7
-	scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-	scroll.CanvasSize = UDim2.new()
-	scroll.Parent = content
-	local layout = Instance.new("UIListLayout")
-	layout.Padding = UDim.new(0, 7)
-	layout.Parent = scroll
-	for _, row in rows do
-		local text, action, payload = render(row)
-		local button = Instance.new("TextButton")
-		button.Size = UDim2.new(1, -10, 0, 52)
-		button.BackgroundColor3 = action and Color3.fromRGB(239, 216, 190) or Color3.fromRGB(235, 229, 216)
-		button.TextColor3 = brown
-		button.Font = Enum.Font.GothamMedium
-		button.TextSize = 15
-		button.TextWrapped = true
-		button.Text = text
-		button.AutoButtonColor = action ~= nil
-		button.Parent = scroll
-		Instance.new("UICorner", button).CornerRadius = UDim.new(0, 8)
-		if action then
-			table.insert(connections, button.Activated:Connect(function()
-				actionRemote:InvokeServer(action, payload)
-			end))
-		end
-	end
-end
-
-local function openManagement()
-	clearContent()
-	modal.Visible = true
-	title.Text = "Café Management"
-	local layout = Instance.new("UIGridLayout")
-	layout.CellSize = UDim2.fromOffset(225, 75)
-	layout.CellPadding = UDim2.fromOffset(10, 10)
-	layout.Parent = content
-	local function category(name: string, callback: () -> ())
-		local button = Instance.new("TextButton")
-		button.BackgroundColor3 = Color3.fromRGB(239, 216, 190)
-		button.TextColor3 = brown
-		button.TextSize = 19
-		button.Font = Enum.Font.GothamBold
-		button.Text = name
-		button.Parent = content
-		Instance.new("UICorner", button).CornerRadius = UDim.new(0, 10)
-		table.insert(connections, button.Activated:Connect(callback))
-	end
-	category("📦 Inventory", function()
-		local rows = table.clone(latestState.inventory)
-		for _, delivery in latestState.deliveries do table.insert(rows, { delivery = true, name = delivery.name, arrivesIn = delivery.arrivesIn }) end
-		managementList("Inventory & Deliveries", rows, function(row)
-			if row.delivery then return `🚚 {row.name} arrives in {row.arrivesIn}s`, nil, nil end
-			return `{row.name}: {row.amount}  •  {math.floor(row.quality * 100)}% quality`, nil, nil
-		end)
-	end)
-	category("🚚 Suppliers", function()
-		local rows = {}
-		for supplierId, supplier in Economy.Suppliers do
-			for ingredientId, product in supplier.products do
-				table.insert(rows, { supplierId = supplierId, ingredientId = ingredientId, supplier = supplier, product = product })
-			end
-		end
-		managementList("Supplier Store", rows, function(row)
-			return `{row.supplier.name} · {Economy.Ingredients[row.ingredientId].name} +{row.product.amount}  •  ${row.product.cost}  •  Lv.{row.supplier.unlockLevel}`, "OrderSupply", { supplierId = row.supplierId, ingredientId = row.ingredientId }
-		end)
-	end)
-	category("⚙ Equipment", function()
-		managementList("Equipment Upgrades", latestState.equipment, function(row)
-			if not row.cost then return `{row.name}: {row.tier} (MAX)`, nil, nil end
-			return `{row.name}: {row.tier} → {row.nextName}  •  ${row.cost}`, "UpgradeEquipment", row.id
-		end)
-	end)
-	category("🏃 Player Skills", function()
-		managementList("Player Upgrades", latestState.upgrades, function(row)
-			if not row.cost then return `{row.name}: Lv.{row.level} (MAX)`, nil, nil end
-			return `{row.name}: Lv.{row.level} → {row.level + 1}  •  ${row.cost}`, "UpgradePlayer", row.id
-		end)
-	end)
-	category("👥 Staff", function()
-		managementList("Hire & Train Staff", latestState.staff, function(row)
-			if not row.hired then return `{row.name} · {row.role}  •  Hire ${row.hireCost} · Wage ${row.wage}/day`, "HireStaff", row.id end
-			if not row.trainingCost then return `{row.name} · {row.role} · Training Lv.{row.training} (MAX) · ${row.wage}/day`, nil, nil end
-			return `{row.name} · {row.role} · Training Lv.{row.training}  •  Train ${row.trainingCost}`, "TrainStaff", row.id
-		end)
-	end)
-end
-
 local function openStation(station: string)
 	clearContent()
 	modal.Visible = true
@@ -332,7 +234,7 @@ local function connectPrompt(prompt: ProximityPrompt)
 	prompt.Triggered:Connect(function()
 		local stationPart = prompt.Parent
 		local station = stationPart and stationPart:GetAttribute("Station")
-		if station == "Serve" then actionRemote:InvokeServer("Serve") elseif station == "Management" then openManagement() elseif station then openStation(station) end
+		if station == "Serve" then actionRemote:InvokeServer("Serve") elseif station then openStation(station) end
 	end)
 end
 
@@ -340,8 +242,6 @@ for _, descendant in workspace:GetDescendants() do if descendant:IsA("ProximityP
 workspace.DescendantAdded:Connect(function(descendant) if descendant:IsA("ProximityPrompt") then connectPrompt(descendant) end end)
 
 local function renderState(state)
-	latestState = state
-	interactionLevel = state.interactionLevel or 0
 	top.Text = `☕ Day {state.day} · {state.period} ({math.floor(state.timeLeft / 60)}:{state.timeLeft % 60 // 10}{state.timeLeft % 10})     ${state.cash} · Level {state.level} ({state.xp} XP)`
 	local lines = { "<b>ORDER TICKETS</b>" }
 	for _, order in state.orders do

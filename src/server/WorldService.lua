@@ -28,14 +28,12 @@ function WorldService.Build()
 		{ "Affogato", Vector3.new(0, 5, -5), Color3.fromRGB(235, 188, 198) },
 		{ "Bakery", Vector3.new(10, 5, -5), Color3.fromRGB(208, 126, 73) },
 		{ "Serve", Vector3.new(0, 3, 0), Color3.fromRGB(105, 167, 116) },
-		{ "Management", Vector3.new(14, 3, 0), Color3.fromRGB(91, 139, 157) },
 	}
 	for _, info in stations do
 		local station = part(cafe, info[1] .. "Station", info[2], Vector3.new(6, 2, 3), info[3])
 		station:SetAttribute("Station", info[1])
 		local prompt = Instance.new("ProximityPrompt")
 		prompt.ActionText = info[1] == "Serve" and "Serve next order" or "Prepare item"
-		if info[1] == "Management" then prompt.ActionText = "Manage café" end
 		prompt.ObjectText = info[1] .. " Station"
 		prompt.MaxActivationDistance = 10
 		prompt.RequiresLineOfSight = false
@@ -54,26 +52,6 @@ function WorldService.Build()
 	queue.Name = "Customers"
 	queue.Parent = cafe
 	return cafe
-end
-
-function WorldService.ShowDelivery(player: Player, ingredientName: string)
-	local cafe = workspace:FindFirstChild("AffogatoCafe")
-	if not cafe then return end
-	local box = part(cafe, `Delivery_{player.UserId}`, Vector3.new(-24, 1.5, 15), Vector3.new(4, 3, 4), Color3.fromRGB(177, 126, 76))
-	box:SetAttribute("OwnerUserId", player.UserId)
-	local gui = Instance.new("BillboardGui")
-	gui.Size = UDim2.fromOffset(220, 55)
-	gui.StudsOffset = Vector3.new(0, 2.5, 0)
-	gui.AlwaysOnTop = true
-	gui.Parent = box
-	local text = Instance.new("TextLabel")
-	text.Size = UDim2.fromScale(1, 1)
-	text.BackgroundColor3 = Color3.fromRGB(255, 248, 235)
-	text.TextColor3 = Color3.fromRGB(82, 52, 42)
-	text.TextScaled = true
-	text.Text = `{player.DisplayName}: {ingredientName}`
-	text.Parent = gui
-	task.delay(8, function() if box.Parent then box:Destroy() end end)
 end
 
 function WorldService.CreateCustomer(id: number, queuePosition: number): Model

@@ -1,6 +1,7 @@
 # Affogato Café
 
 A server-authoritative Roblox café and bakery prototype implementing the first five phases of the game roadmap: core service, interactive preparation, stock and suppliers, upgrades, and staff automation.
+A server-authoritative Roblox café and bakery prototype implementing the first two phases of the game roadmap: the core café loop and interactive preparation.
 
 ## What is playable
 
@@ -38,18 +39,18 @@ Walk to a station and use its proximity prompt. Prepare every item shown on the 
 
 ```text
 src/shared/       Recipes, tuning, and remote names
-src/server/       Profiles, economy, staff, day cycle, queue/orders, preparation, world builder
+src/server/       Profiles, day cycle, queue/orders, preparation, world builder
 src/client/       HUD, station recipe picker, preparation interactions
 default.project.json
 ```
 
 ## Architecture and security
 
-The client only presents interactions and reports a bounded quality score. Recipe selection, ingredient spending, purchases, station matching, sequence advancement, minimum action interval, bake delay, prepared inventory, exact order matching, payouts, staff work, XP, and saved profiles are owned by the server. Supplier product IDs and all purchase prices are re-resolved from shared server data rather than trusted from client payloads.
+The client only presents interactions and reports a bounded quality score. Recipe selection, station matching, sequence advancement, minimum action interval, bake delay, prepared inventory, exact order matching, payouts, XP, and saved profiles are owned by the server. This is an intentionally compact vertical slice; Phase 3 should add ingredient inventory and supplier costs before the economy is balanced for release.
 
 ## Next implementation steps
 
-1. Add decorating, grid placement, ambience, and café expansions (Phase 6).
+1. Add server-owned ingredient inventory and suppliers (Phase 3).
 2. Replace generated blockout geometry and customers with authored café/NPC assets and pathfinding.
 3. Add multiplayer café ownership or isolated player plots before supporting multiple simultaneous owners in one server.
 4. Add automated TestEZ specifications once the experience's package manager is selected.
