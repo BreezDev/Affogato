@@ -20,13 +20,11 @@ local function neededRecipe(player: Player, role: string): string?
 	local heldCounts = {}
 	for _, item in preparation.GetPrepared(player) do heldCounts[item.recipeId] = (heldCounts[item.recipeId] or 0) + 1 end
 	for _, id in order.items do
-		local info = orders.GetItemInfo(id)
-		local heldId = info and info.baseId or id
-		if (heldCounts[heldId] or 0) > 0 then
-			heldCounts[heldId] -= 1
+		if (heldCounts[id] or 0) > 0 then
+			heldCounts[id] -= 1
 		else
-			local category = info and info.category
-			if (role == "Barista" and category == "Drink") or (role == "Baker" and category == "Bakery") then return info.baseId end
+			local category = Recipes.ById[id].category
+			if (role == "Barista" and category == "Drink") or (role == "Baker" and category == "Bakery") then return id end
 		end
 	end
 	return nil

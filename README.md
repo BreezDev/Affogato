@@ -17,21 +17,15 @@ A server-authoritative Roblox café and bakery prototype implementing all eight 
 - Grid-snapped build mode supports buying, placing, moving, rotating, storing, and selling themed furniture, with ambience bonuses and five café expansions.
 - A 1–5 star reputation, fame titles, customer personalities, special visitors, contextual reactions, and timed café events change traffic and demand.
 - Daily challenges, forgiving seven-day login streaks, level unlock previews, menu selection, settings, backup saves, and disabled-by-default Marketplace hooks support long-term progression.
-- Achievements, varied login rewards, milestone recipes, luxury furniture, signature drink creation/pricing, Premium Decor, and a wandering Café Cat complete the post-Phase-8 systems.
 
-## Import into Roblox Studio
+## Run in Roblox Studio
 
-Follow the complete beginner-friendly guide in **[docs/ROBLOX_STUDIO_SETUP.md](docs/ROBLOX_STUDIO_SETUP.md)**. The recommended workflow is:
+This repository uses [Rojo](https://rojo.space/) project conventions.
 
-1. Install Rojo 7.7.x and its Roblox Studio plugin.
-2. Run `rojo serve default.project.json` from this repository.
-3. Connect the Studio plugin to `localhost:34872` and sync into a baseplate.
-4. Press **Play**, not Run, so the server and client both start.
-5. Publish to a private test experience before enabling Studio API access or configuring Marketplace IDs.
-
-The guide also covers one-time `.rbxlx` builds, Explorer structure, DataStore safety, publishing, Marketplace setup, multiplayer/device testing, production assets still needed, and troubleshooting.
-
-The detailed implementation map for levels, challenges, login rewards, achievements, monetization, menus, and signature drinks is in **[docs/POST_PHASE_8.md](docs/POST_PHASE_8.md)**.
+1. Install Rojo 7.x and its Roblox Studio plugin.
+2. From the repository root, run `rojo serve`.
+3. Connect the Studio plugin and press **Play** (not Run) so a player and client are created.
+4. For persistence testing, publish the experience and enable **Game Settings → Security → Enable Studio Access to API Services**. Without API access, play remains functional with session defaults.
 
 The runtime creates four stations:
 

@@ -30,21 +30,10 @@ function ProgressionService.OnLoad(player: Player): string?
 	local gap = today - profile.lastLoginDay
 	profile.loginStreak = gap <= 2 and math.min(profile.loginStreak + 1, 7) or 1
 	profile.lastLoginDay = today
-	local reward = Meta.LoginRewards[profile.loginStreak]
-	local message
-	if reward.kind == "Cash" then profile.cash += reward.amount message = `+${reward.amount}`
-	elseif reward.kind == "XP" then profile.xp += reward.amount profile.level = math.floor(profile.xp / 100) + 1 message = `+{reward.amount} XP`
-	elseif reward.kind == "Furniture" then profile.furnitureOwned[reward.itemId] = (profile.furnitureOwned[reward.itemId] or 0) + reward.amount message = `+{reward.amount} {Meta.Furniture[reward.itemId].name}`
-	else
-		local premium = reward.kind == "PremiumIngredients"
-		for id in profile.inventory do
-			profile.inventory[id] += reward.amount
-			if premium then profile.ingredientQuality[id] = math.max(profile.ingredientQuality[id], 1) end
-		end
-		message = `+{reward.amount} of every {premium and "premium " or ""}ingredient`
-	end
+	local cashReward = 50 + profile.loginStreak * 25
+	profile.cash += cashReward
 	ProgressionService.Changed:Fire(player)
-	return `Daily reward Day {profile.loginStreak}: {message}!`
+	return `Daily reward Day {profile.loginStreak}: +${cashReward}!`
 end
 
 function ProgressionService.Record(player: Player, kind: string, amount: number)
@@ -54,28 +43,6 @@ function ProgressionService.Record(player: Player, kind: string, amount: number)
 		if not progress.claimed and progress.id == kind then progress.progress = math.min(progress.target, progress.progress + amount) end
 	end
 	ProgressionService.Changed:Fire(player)
-end
-
-function ProgressionService.CheckAchievements(player: Player, metrics): { string }
-	local profile = profiles.Get(player)
-	local unlocked = {}
-	if not profile then return unlocked end
-	local values = {
-		Orders = profile.completedOrders, Affogatos = profile.stats.Affogatos,
-		Reputation = metrics.reputation or profile.reputation, Ambience = metrics.ambience or 0,
-		Expansion = metrics.expansion or profile.expansion,
-	}
-	for id, achievement in Meta.Achievements do
-		if not profile.achievements[id] and (values[achievement.kind] or 0) >= achievement.target then
-			profile.achievements[id] = true
-			profile.cash += achievement.rewardCash
-			profile.xp += achievement.rewardXP
-			profile.level = math.floor(profile.xp / 100) + 1
-			table.insert(unlocked, `{achievement.name}: +${achievement.rewardCash}, +{achievement.rewardXP} XP`)
-		end
-	end
-	if #unlocked > 0 then ProgressionService.Changed:Fire(player) end
-	return unlocked
 end
 
 function ProgressionService.Claim(player: Player, challengeId: string): (boolean, string)

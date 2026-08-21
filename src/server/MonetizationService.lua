@@ -9,7 +9,6 @@ local Meta = require(game.ReplicatedStorage.Affogato.Meta)
 local MonetizationService = {}
 MonetizationService.Changed = Instance.new("BindableEvent")
 local profiles
-local worldService
 
 function MonetizationService.RefreshPasses(player: Player)
 	local profile = profiles.Get(player)
@@ -20,11 +19,7 @@ function MonetizationService.RefreshPasses(player: Player)
 			if success then profile.purchasedGamepasses[name] = owns end
 		end
 	end
-	player:SetAttribute("AffogatoVIP", profile.purchasedGamepasses.VIP == true)
-	player:SetAttribute("AffogatoOutfitPack", profile.purchasedGamepasses.OutfitPack == true)
 	MonetizationService.Changed:Fire(player)
-	if worldService then worldService.ShowCafeCat(player, profile.purchasedGamepasses.CafeCat == true) end
-	if worldService then worldService.ShowVIPSign(player, profile.purchasedGamepasses.VIP == true) end
 end
 
 function MonetizationService.GetEarningsMultiplier(player: Player): number
@@ -50,17 +45,13 @@ local function grantProduct(player: Player, productId: number): boolean
 	return true
 end
 
-function MonetizationService.Start(profileService, world)
+function MonetizationService.Start(profileService)
 	profiles = profileService
-	worldService = world
 	MarketplaceService.ProcessReceipt = function(receipt)
 		local player = Players:GetPlayerByUserId(receipt.PlayerId)
 		if not player then return Enum.ProductPurchaseDecision.NotProcessedYet end
 		return grantProduct(player, receipt.ProductId) and Enum.ProductPurchaseDecision.PurchaseGranted or Enum.ProductPurchaseDecision.NotProcessedYet
 	end
-	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, _, purchased)
-		if purchased then MonetizationService.RefreshPasses(player) end
-	end)
 end
 
 return MonetizationService

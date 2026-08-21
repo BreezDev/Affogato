@@ -6,7 +6,6 @@ local Players = game:GetService("Players")
 local Config = require(game.ReplicatedStorage.Affogato.Config)
 local Economy = require(game.ReplicatedStorage.Affogato.Economy)
 local Meta = require(game.ReplicatedStorage.Affogato.Meta)
-local Recipes = require(game.ReplicatedStorage.Affogato.Recipes)
 
 export type Profile = {
 	cash: number,
@@ -33,9 +32,6 @@ export type Profile = {
 	settings: { [string]: any },
 	purchasedGamepasses: { [string]: boolean },
 	earningsBoostEndsAt: number,
-	stats: { [string]: number },
-	achievements: { [string]: boolean },
-	signatureDrinks: { any },
 }
 
 local ProfileService = {}
@@ -65,8 +61,6 @@ local function copyDefault(): Profile
 		challengeDay = 0, dailyChallenges = {}, lastLoginDay = 0, loginStreak = 0,
 		menu = { "Espresso", "Latte", "ClassicAffogato", "Cookie", "Croissant" },
 		settings = { music = true, sound = true, reducedMotion = false }, purchasedGamepasses = {}, earningsBoostEndsAt = 0,
-		stats = { Affogatos = 0, BakedItems = 0 }, achievements = {},
-		signatureDrinks = {},
 	}
 end
 
@@ -153,15 +147,6 @@ function ProfileService.Load(player: Player): Profile
 		if type(saved.settings) == "table" then for keyName in profile.settings do if type(saved.settings[keyName]) == "boolean" then profile.settings[keyName] = saved.settings[keyName] end end end
 		if type(saved.purchasedGamepasses) == "table" then for id, owned in saved.purchasedGamepasses do if Meta.Gamepasses[id] and type(owned) == "boolean" then profile.purchasedGamepasses[id] = owned end end end
 		profile.earningsBoostEndsAt = math.max(0, math.floor(tonumber(saved.earningsBoostEndsAt) or 0))
-		copyNumbers(profile.stats, saved.stats)
-		if type(saved.achievements) == "table" then for id, unlocked in saved.achievements do if Meta.Achievements[id] and unlocked == true then profile.achievements[id] = true end end end
-		if type(saved.signatureDrinks) == "table" then
-			for _, recipe in saved.signatureDrinks do
-				if type(recipe) == "table" and type(recipe.id) == "string" and recipe.id:sub(1, 10) == "Signature_" and type(recipe.name) == "string" and Recipes.ById[recipe.baseId] and #profile.signatureDrinks < 3 then
-					table.insert(profile.signatureDrinks, { id = recipe.id, name = recipe.name:sub(1, 28), baseId = recipe.baseId, prepId = Recipes.ById[recipe.prepId] and recipe.prepId or recipe.baseId, flavor = tostring(recipe.flavor), topping = tostring(recipe.topping), price = math.clamp(tonumber(recipe.price) or 10, 5, 18), sold = math.max(0, math.floor(tonumber(recipe.sold) or 0)) })
-				end
-			end
-		end
 	elseif not success then
 		warn(`Could not load profile for {player.Name}; using session defaults`)
 	end

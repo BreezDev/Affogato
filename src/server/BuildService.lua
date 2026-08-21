@@ -39,8 +39,6 @@ function BuildService.Buy(player: Player, itemId: string): (boolean, string)
 	local profile = profiles.Get(player)
 	local item = Meta.Furniture[itemId]
 	if not profile or not item then return false, "Unknown furniture." end
-	if profile.level < (item.unlockLevel or 1) then return false, `Reach level {item.unlockLevel} to unlock {item.name}.` end
-	if item.gamepass and not profile.purchasedGamepasses[item.gamepass] then return false, "This cosmetic belongs to the Premium Decor Pack." end
 	if profile.cash < item.cost then return false, "You do not have enough cash." end
 	profile.cash -= item.cost
 	profile.furnitureOwned[itemId] = (profile.furnitureOwned[itemId] or 0) + 1
@@ -95,7 +93,6 @@ function BuildService.Expand(player: Player): (boolean, string)
 	local nextExpansion = Meta.Expansions[profile.expansion + 1]
 	if not nextExpansion then return false, "Your café is fully expanded." end
 	if profile.cash < nextExpansion.cost then return false, "You do not have enough cash." end
-	if profile.expansion + 1 >= 4 and profile.level < 30 then return false, "Reach level 30 for major café expansions." end
 	profile.cash -= nextExpansion.cost
 	profile.expansion += 1
 	world.RenderExpansion(player, profile.expansion)

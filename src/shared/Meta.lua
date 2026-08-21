@@ -11,8 +11,6 @@ Meta.Furniture = table.freeze({
 	PinkFlowers = { name = "Pink Flower Vase", theme = "Pink Café", cost = 85, ambience = 7, size = { 1, 1 }, color = { 232, 153, 175 } },
 	VintagePainting = { name = "Vintage Coffee Painting", theme = "Italian Café", cost = 140, ambience = 10, size = { 2, 1 }, color = { 115, 70, 52 } },
 	IndustrialLamp = { name = "Industrial Floor Lamp", theme = "Industrial", cost = 120, ambience = 6, size = { 1, 1 }, color = { 67, 68, 69 } },
-	LuxuryChandelier = { name = "Luxury Gold Chandelier", theme = "Luxury", cost = 1800, ambience = 25, size = { 2, 2 }, color = { 222, 184, 92 }, unlockLevel = 50 },
-	RoseGoldCounter = { name = "Rose Gold Counter", theme = "Premium Decor", cost = 0, ambience = 12, size = { 3, 1 }, color = { 218, 152, 160 }, gamepass = "PremiumDecor" },
 })
 
 Meta.Expansions = table.freeze({
@@ -52,7 +50,7 @@ Meta.Events = table.freeze({
 })
 
 Meta.LevelUnlocks = table.freeze({
-	{ level = 1, name = "Basic Coffee & Bakery" }, { level = 5, name = "Chocolate Croissant & Local Supplier" },
+	{ level = 1, name = "Basic Coffee & Bakery" }, { level = 5, name = "Local Supplier" },
 	{ level = 10, name = "Pistachio Collection" }, { level = 15, name = "Matcha Collection" },
 	{ level = 20, name = "Advanced Staff" }, { level = 25, name = "Tiramisu" },
 	{ level = 30, name = "Major Café Expansion" }, { level = 40, name = "Macarons" }, { level = 50, name = "Luxury Furniture" },
@@ -70,26 +68,9 @@ Meta.Challenges = table.freeze({
 	{ id = "PerfectOrders", description = "Complete 3 perfect orders", target = 3, rewardCash = 200, rewardXP = 100 },
 	{ id = "EarnCash", description = "Earn $300 from orders", target = 300, rewardCash = 125, rewardXP = 75 },
 	{ id = "MakeAffogato", description = "Make 5 affogatos", target = 5, rewardCash = 175, rewardXP = 90 },
-	{ id = "BakeItems", description = "Bake 8 pastries", target = 8, rewardCash = 140, rewardXP = 85 },
-	{ id = "RushOrders", description = "Serve 5 orders during a rush", target = 5, rewardCash = 225, rewardXP = 110 },
 })
 
-Meta.Achievements = table.freeze({
-	FirstOrder = { name = "First Pour", description = "Complete your first order", kind = "Orders", target = 1, rewardCash = 50, rewardXP = 25 },
-	OrderCentury = { name = "Neighborhood Staple", description = "Complete 100 orders", kind = "Orders", target = 100, rewardCash = 1000, rewardXP = 500 },
-	AffogatoArtist = { name = "Affogato Artist", description = "Prepare 50 affogatos", kind = "Affogatos", target = 50, rewardCash = 750, rewardXP = 350 },
-	FiveStars = { name = "Five-Star Service", description = "Reach a 5-star reputation", kind = "Reputation", target = 5, rewardCash = 1500, rewardXP = 750 },
-	Decorator = { name = "Cozy Corner", description = "Reach 50 ambience", kind = "Ambience", target = 50, rewardCash = 400, rewardXP = 200 },
-	ExpansionMaster = { name = "Café Empire", description = "Unlock every café expansion", kind = "Expansion", target = 6, rewardCash = 2500, rewardXP = 1000 },
-})
-
-Meta.LoginRewards = table.freeze({
-	{ kind = "Cash", amount = 75 }, { kind = "Ingredients", amount = 5 }, { kind = "Cash", amount = 150 },
-	{ kind = "Furniture", itemId = "PinkFlowers", amount = 1 }, { kind = "PremiumIngredients", amount = 8 },
-	{ kind = "XP", amount = 200 }, { kind = "Furniture", itemId = "VintagePainting", amount = 1 },
-})
-
-Meta.Gamepasses = table.freeze({ VIP = 0, ExtraEmployeeSlot = 0, PremiumDecor = 0, CafeCat = 0, OutfitPack = 0 })
+Meta.Gamepasses = table.freeze({ VIP = 0, ExtraEmployeeSlot = 0, PremiumDecor = 0, CafeCat = 0 })
 Meta.DeveloperProducts = table.freeze({ EmergencyRestock = 0, CashSmall = 0, CashMedium = 0, CashLarge = 0, Earnings15 = 0, Earnings30 = 0, InstantDelivery = 0 })
 
 return table.freeze(Meta)

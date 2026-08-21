@@ -128,59 +128,6 @@ function WorldService.RenderExpansion(player: Player, expansionLevel: number)
 	boundary:SetAttribute("OwnerUserId", player.UserId)
 end
 
-function WorldService.ShowCafeCat(player: Player, enabled: boolean)
-	local folder = ownerFolder(player)
-	local old = folder:FindFirstChild("CafeCat")
-	if old then old:Destroy() end
-	if not enabled then return end
-	local cat = part(folder, "CafeCat", Vector3.new(-7, 1, 13), Vector3.new(2.2, 1.5, 3), Color3.fromRGB(220, 174, 124))
-	cat.CanCollide = false
-	cat:SetAttribute("OwnerUserId", player.UserId)
-	local label = Instance.new("BillboardGui")
-	label.Size = UDim2.fromOffset(130, 32)
-	label.StudsOffset = Vector3.new(0, 1.5, 0)
-	label.AlwaysOnTop = true
-	label.Parent = cat
-	local text = Instance.new("TextLabel")
-	text.Size = UDim2.fromScale(1, 1)
-	text.BackgroundTransparency = 1
-	text.Text = "🐾 Café Cat"
-	text.TextScaled = true
-	text.Parent = label
-	task.spawn(function()
-		local points = { Vector3.new(-7, 1, 13), Vector3.new(8, 1, 14), Vector3.new(11, 1, -1), Vector3.new(-12, 1, 1) }
-		local index = 1
-		while cat.Parent do
-			index = index % #points + 1
-			local start = cat.Position
-			for step = 1, 80 do
-				if not cat.Parent then return end
-				cat.Position = start:Lerp(points[index], step / 80)
-				task.wait(0.05)
-			end
-			task.wait(3)
-		end
-	end)
-end
-
-function WorldService.ShowVIPSign(player: Player, enabled: boolean)
-	local folder = ownerFolder(player)
-	local old = folder:FindFirstChild("VIPCafeSign")
-	if old then old:Destroy() end
-	if not enabled then return end
-	local sign = part(folder, "VIPCafeSign", Vector3.new(0, 9, -25.8), Vector3.new(15, 3, 0.4), Color3.fromRGB(222, 184, 92))
-	local surface = Instance.new("SurfaceGui")
-	surface.Face = Enum.NormalId.Front
-	surface.Parent = sign
-	local text = Instance.new("TextLabel")
-	text.Size = UDim2.fromScale(1, 1)
-	text.BackgroundTransparency = 1
-	text.Text = `★ {player.DisplayName}'s VIP Café ★`
-	text.TextScaled = true
-	text.TextColor3 = Color3.fromRGB(75, 49, 40)
-	text.Parent = surface
-end
-
 function WorldService.CreateCustomer(id: number, queuePosition: number): Model
 	local cafe = workspace:WaitForChild("AffogatoCafe")
 	local model = Instance.new("Model")

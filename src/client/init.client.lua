@@ -4,7 +4,6 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local MarketplaceService = game:GetService("MarketplaceService")
 
 local player = Players.LocalPlayer
 local shared = ReplicatedStorage:WaitForChild("Affogato")
@@ -88,7 +87,6 @@ Instance.new("UICorner", close).CornerRadius = UDim.new(1, 0)
 
 local connections: { RBXScriptConnection } = {}
 local renderStep: (any) -> ()
-local openSignatureEditor: () -> ()
 local latestState: any = nil
 local interactionLevel = 0
 local placementItem: string? = nil
@@ -244,65 +242,10 @@ local function managementList(heading: string, rows: { any }, render: (any) -> (
 					placementItem = nil
 					modal.Visible = false
 					showToast("Build Mode: click a new floor grid cell.", true)
-				elseif action == "LocalSignature" then openSignatureEditor()
-				elseif action == "LocalPass" and tonumber(payload) and payload > 0 then MarketplaceService:PromptGamePassPurchase(player, payload)
-				elseif action == "LocalProduct" and tonumber(payload) and payload > 0 then MarketplaceService:PromptProductPurchase(player, payload)
 				else actionRemote:InvokeServer(action, payload) end
 			end))
 		end
 	end
-end
-
-openSignatureEditor = function()
-	clearContent()
-	title.Text = "Create Signature Drink"
-	local layout = Instance.new("UIListLayout")
-	layout.Padding = UDim.new(0, 7)
-	layout.Parent = content
-	local nameBox = Instance.new("TextBox")
-	nameBox.Size = UDim2.new(1, 0, 0, 45)
-	nameBox.PlaceholderText = "Drink name (3–28 characters)"
-	nameBox.Text = "My Café Dream"
-	nameBox.TextSize = 18
-	nameBox.Parent = content
-	local priceBox = Instance.new("TextBox")
-	priceBox.Size = UDim2.new(1, 0, 0, 42)
-	priceBox.PlaceholderText = "Price ($5–$18)"
-	priceBox.Text = "10"
-	priceBox.TextSize = 18
-	priceBox.Parent = content
-	local choices = {
-		{ key = "baseId", values = { "Latte", "IcedLatte", "ClassicAffogato" } },
-		{ key = "flavor", values = { "None", "Caramel", "Chocolate", "Pistachio", "Matcha" } },
-		{ key = "topping", values = { "None", "WhippedCream", "CookieCrumb", "ChocolateDrizzle" } },
-	}
-	local selected = {}
-	for _, choice in choices do
-		local index = 1
-		selected[choice.key] = choice.values[index]
-		local button = Instance.new("TextButton")
-		button.Size = UDim2.new(1, 0, 0, 42)
-		button.Text = `{choice.key}: {choice.values[index]} (click to change)`
-		button.TextSize = 17
-		button.BackgroundColor3 = Color3.fromRGB(239, 216, 190)
-		button.Parent = content
-		table.insert(connections, button.Activated:Connect(function()
-			index = index % #choice.values + 1
-			selected[choice.key] = choice.values[index]
-			button.Text = `{choice.key}: {choice.values[index]} (click to change)`
-		end))
-	end
-	local create = Instance.new("TextButton")
-	create.Size = UDim2.new(1, 0, 0, 48)
-	create.Text = "Create & add to menu"
-	create.TextSize = 19
-	create.BackgroundColor3 = rose
-	create.TextColor3 = Color3.new(1, 1, 1)
-	create.Parent = content
-	table.insert(connections, create.Activated:Connect(function()
-		actionRemote:InvokeServer("CreateSignature", { name = nameBox.Text, price = tonumber(priceBox.Text), baseId = selected.baseId, flavor = selected.flavor, topping = selected.topping })
-		modal.Visible = false
-	end))
 end
 
 local function openManagement()
@@ -372,7 +315,7 @@ local function openManagement()
 	category("🪑 Furniture", function()
 		local rows = {}
 		for _, row in latestState.furniture do
-			table.insert(rows, { text = row.locked and `🔒 {row.name} · Premium Decor Pack` or `BUY · {row.name} [{row.theme}] +{row.ambience} ambience · ${row.cost}`, action = row.locked and nil or "BuyFurniture", payload = row.id })
+			table.insert(rows, { text = `BUY · {row.name} [{row.theme}] +{row.ambience} ambience · ${row.cost}`, action = "BuyFurniture", payload = row.id })
 			if row.owned > 0 then table.insert(rows, { text = `PLACE · {row.name} · {row.owned} stored`, action = "LocalPlace", payload = row.id }) end
 		end
 		for _, placed in latestState.placements do
@@ -398,36 +341,10 @@ local function openManagement()
 			return text, row.progress >= row.target and "ClaimChallenge" or nil, row.id
 		end)
 	end)
-	category("🏆 Achievements", function()
-		managementList("Achievements", latestState.achievements, function(row)
-			return `{row.unlocked and "✓" or "○"} {row.name} · {row.description} · {row.progress}/{row.target}`, nil, nil
-		end)
-	end)
-	category("🎁 Login Rewards", function()
-		local rows = {}
-		for day, reward in latestState.loginRewards do
-			local detail = reward.itemId and reward.itemId or `{reward.amount} {reward.kind}`
-			table.insert(rows, { day = day, detail = detail })
-		end
-		managementList(`Login Calendar · Current Day {latestState.loginStreak}`, rows, function(row)
-			return `{row.day == latestState.loginStreak and "TODAY" or "Day " .. row.day} · {row.detail}`, nil, nil
-		end)
-	end)
-	category("✨ Signature Drink", function()
-		local rows = { { text = "CREATE · Choose a base, flavor, topping, name, and price", action = #latestState.signatures < 3 and "LocalSignature" or nil } }
-		for _, recipe in latestState.signatures do
-			table.insert(rows, { text = `{recipe.name} · {recipe.baseId} + {recipe.flavor} + {recipe.topping} · ${recipe.price} · {recipe.sold} sold`, action = nil })
-			table.insert(rows, { text = `DELETE · {recipe.name}`, action = "DeleteSignature", payload = recipe.id })
-		end
-		managementList("Signature Drinks", rows, function(row) return row.text, row.action, row.payload end)
-	end)
 	category("📋 Menu", function()
 		local active = {} for _, id in latestState.menu do active[id] = true end
-		local rows = table.clone(Recipes.List)
-		for _, signature in latestState.signatures do table.insert(rows, { id = signature.id, displayName = signature.name, price = signature.price }) end
-		managementList("Café Menu", rows, function(row)
-			local locked = row.unlockLevel and latestState.level < row.unlockLevel
-			return `{locked and "🔒" or active[row.id] and "✓" or "○"} {row.displayName} · ${row.price}`, locked and nil or "ToggleMenuItem", row.id
+		managementList("Café Menu", Recipes.List, function(row)
+			return `{active[row.id] and "✓" or "○"} {row.displayName} · ${row.price}`, "ToggleMenuItem", row.id
 		end)
 	end)
 	category("⚙ Settings", function()
@@ -436,12 +353,6 @@ local function openManagement()
 		managementList("Settings", rows, function(row)
 			return `{row.key}: {row.value and "ON" or "OFF"}`, "UpdateSetting", { key = row.key, value = not row.value }
 		end)
-	end)
-	category("🛍 Optional Shop", function()
-		local rows = {}
-		for name, id in latestState.store.gamepasses do table.insert(rows, { text = `{name} Gamepass · {id > 0 and "Open purchase prompt" or "Set ID in Meta.lua"}`, action = id > 0 and "LocalPass" or nil, payload = id }) end
-		for name, id in latestState.store.products do table.insert(rows, { text = `{name} Product · {id > 0 and "Open purchase prompt" or "Set ID in Meta.lua"}`, action = id > 0 and "LocalProduct" or nil, payload = id }) end
-		managementList("Optional Shop · Core progression uses café cash", rows, function(row) return row.text, row.action, row.payload end)
 	end)
 end
 

@@ -13,10 +13,6 @@ Economy.Ingredients = table.freeze({
 	PastryDough = { name = "Pastry Dough", unit = "pastries", starting = 12 },
 	CookieDough = { name = "Cookie Dough", unit = "cookies", starting = 10 },
 	MuffinBatter = { name = "Muffin Batter", unit = "muffins", starting = 8 },
-	PistachioCream = { name = "Pistachio Cream", unit = "servings", starting = 0 },
-	Matcha = { name = "Matcha", unit = "servings", starting = 0 },
-	CakeBatter = { name = "Cake Batter", unit = "portions", starting = 0 },
-	MacaronMix = { name = "Macaron Mix", unit = "batches", starting = 0 },
 })
 
 Economy.Suppliers = table.freeze({
@@ -37,7 +33,6 @@ Economy.Suppliers = table.freeze({
 			VanillaGelato = { cost = 27, amount = 20 }, ChocolateGelato = { cost = 30, amount = 20 },
 			Syrup = { cost = 15, amount = 20 }, Chocolate = { cost = 18, amount = 20 },
 			PastryDough = { cost = 21, amount = 24 }, CookieDough = { cost = 18, amount = 20 }, MuffinBatter = { cost = 19, amount = 20 },
-			PistachioCream = { cost = 28, amount = 12 }, Matcha = { cost = 25, amount = 12 }, CakeBatter = { cost = 24, amount = 10 },
 		},
 	},
 	Premium = {
@@ -47,7 +42,6 @@ Economy.Suppliers = table.freeze({
 			VanillaGelato = { cost = 45, amount = 30 }, ChocolateGelato = { cost = 49, amount = 30 },
 			Syrup = { cost = 25, amount = 30 }, Chocolate = { cost = 30, amount = 30 },
 			PastryDough = { cost = 35, amount = 36 }, CookieDough = { cost = 29, amount = 30 }, MuffinBatter = { cost = 31, amount = 30 },
-			PistachioCream = { cost = 48, amount = 20 }, Matcha = { cost = 44, amount = 20 }, CakeBatter = { cost = 40, amount = 20 }, MacaronMix = { cost = 55, amount = 20 },
 		},
 	},
 })
@@ -89,8 +83,6 @@ Economy.Staff = table.freeze({
 	Ava = { name = "Ava", role = "Barista", hireCost = 300, wage = 45, speed = 3, accuracy = 4, friendliness = 5 },
 	Marco = { name = "Marco", role = "Baker", hireCost = 450, wage = 60, speed = 5, accuracy = 3, friendliness = 3 },
 	Mia = { name = "Mia", role = "Server", hireCost = 250, wage = 40, speed = 4, accuracy = 4, friendliness = 4 },
-	Theo = { name = "Theo", role = "Barista", hireCost = 700, wage = 75, speed = 5, accuracy = 5, friendliness = 3 },
-	Sofia = { name = "Sofia", role = "Baker", hireCost = 650, wage = 70, speed = 4, accuracy = 5, friendliness = 4 },
 })
 
 Economy.Training = table.freeze({ costs = { 500, 1200, 2500, 5000 }, maxLevel = 4 })

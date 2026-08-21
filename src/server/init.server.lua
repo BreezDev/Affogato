@@ -20,7 +20,6 @@ local EventService = require(script.EventService)
 local ReputationService = require(script.ReputationService)
 local ProgressionService = require(script.ProgressionService)
 local MonetizationService = require(script.MonetizationService)
-local SignatureService = require(script.SignatureService)
 
 local remoteFolder = Instance.new("Folder")
 remoteFolder.Name = RemoteNames.Folder
@@ -45,8 +44,7 @@ EventService.Start()
 BuildService.Start(ProfileService, WorldService)
 ReputationService.Start(ProfileService, BuildService)
 ProgressionService.Start(ProfileService)
-MonetizationService.Start(ProfileService, WorldService)
-SignatureService.Start(ProfileService, OrderService)
+MonetizationService.Start(ProfileService)
 EconomyService.Start(ProfileService, WorldService, EventService)
 PreparationService.Start(EconomyService, ProfileService)
 DayService.Start()
@@ -59,11 +57,7 @@ local function serializeState(player: Player)
 	local orders = {}
 	for _, order in OrderService.GetQueue() do
 		local names = {}
-		for _, id in order.items do
-			local info = OrderService.GetItemInfo(id)
-			local prep = info and info.signature and Recipes.ById[info.baseId]
-			table.insert(names, info and (prep and `{info.displayName} (prepare {prep.displayName})` or info.displayName) or "Unavailable item")
-		end
+		for _, id in order.items do table.insert(names, Recipes.ById[id].displayName) end
 		table.insert(orders, { id = order.id, items = names, happiness = order.happiness, customerType = order.customerType })
 	end
 	local held = {}
@@ -96,7 +90,7 @@ local function serializeState(player: Player)
 		table.insert(deliveries, { name = Economy.Ingredients[delivery.ingredientId].name, arrivesIn = math.max(0, delivery.arrivesAt - os.time()) })
 	end
 	local furniture = {}
-	for id, item in Meta.Furniture do table.insert(furniture, { id = id, name = item.name, theme = item.theme, cost = item.cost, ambience = item.ambience, owned = profile.furnitureOwned[id] or 0, locked = item.gamepass and not profile.purchasedGamepasses[item.gamepass] }) end
+	for id, item in Meta.Furniture do table.insert(furniture, { id = id, name = item.name, theme = item.theme, cost = item.cost, ambience = item.ambience, owned = profile.furnitureOwned[id] or 0 }) end
 	local placements = {}
 	for _, placement in profile.furniturePlacements do
 		local item = Meta.Furniture[placement.itemId]
@@ -110,13 +104,6 @@ local function serializeState(player: Player)
 	local nextExpansion = Meta.Expansions[profile.expansion + 1]
 	local nextUnlock
 	for _, unlock in Meta.LevelUnlocks do if unlock.level > profile.level then nextUnlock = unlock break end end
-	local achievements = {}
-	for id, achievement in Meta.Achievements do
-		local progress = achievement.kind == "Orders" and profile.completedOrders or achievement.kind == "Affogatos" and profile.stats.Affogatos or achievement.kind == "Reputation" and profile.reputation or achievement.kind == "Ambience" and BuildService.GetAmbience(player) or achievement.kind == "Expansion" and profile.expansion or 0
-		table.insert(achievements, { id = id, name = achievement.name, description = achievement.description, progress = math.min(progress, achievement.target), target = achievement.target, unlocked = profile.achievements[id] == true })
-	end
-	local signatures = {}
-	for _, recipe in profile.signatureDrinks do table.insert(signatures, { id = recipe.id, name = recipe.name, baseId = recipe.baseId, prepId = recipe.prepId, flavor = recipe.flavor, topping = recipe.topping, price = recipe.price, sold = recipe.sold }) end
 	return {
 		cash = profile.cash,
 		xp = profile.xp,
@@ -135,9 +122,6 @@ local function serializeState(player: Player)
 		event = activeEvent and { name = activeEvent.name, description = activeEvent.description, endsIn = math.max(0, activeEvent.endsAt - os.time()) } or nil,
 		gamepasses = profile.purchasedGamepasses,
 		nextUnlock = nextUnlock,
-		achievements = achievements, loginRewards = Meta.LoginRewards,
-		signatures = signatures,
-		store = { gamepasses = Meta.Gamepasses, products = Meta.DeveloperProducts },
 	}
 end
 
@@ -179,17 +163,9 @@ DayService.Changed.Event:Connect(function()
 end)
 OrderService.Changed.Event:Connect(pushAll)
 EconomyService.Changed.Event:Connect(function(player) if player then pushState(player) else pushAll() end end)
-BuildService.Changed.Event:Connect(function(player)
-	local profile = ProfileService.Get(player)
-	if profile then
-		local unlocked = ProgressionService.CheckAchievements(player, { ambience = BuildService.GetAmbience(player), expansion = profile.expansion })
-		for _, text in unlocked do notifyRemote:FireClient(player, `Achievement unlocked — {text}`, true) end
-	end
-	pushState(player)
-end)
+BuildService.Changed.Event:Connect(function(player) pushState(player) end)
 ProgressionService.Changed.Event:Connect(function(player) pushState(player) end)
 MonetizationService.Changed.Event:Connect(function(player) pushState(player) end)
-SignatureService.Changed.Event:Connect(function(player) pushState(player) end)
 EventService.Changed.Event:Connect(function(event)
 	for _, player in Players:GetPlayers() do notifyRemote:FireClient(player, event and `{event.name}: {event.description}` or "The café event has ended.", true) end
 	pushAll()
@@ -202,11 +178,7 @@ local function completeOrder(player, message, cash, xp, metrics, staff: boolean?
 	ProgressionService.Record(player, "ServeOrders", 1)
 	ProgressionService.Record(player, "EarnCash", finalCash)
 	if metrics.quality >= 0.9 and metrics.speed >= 0.75 then ProgressionService.Record(player, "PerfectOrders", 1) end
-	if DayService.GetPeriod().name:find("Rush") then ProgressionService.Record(player, "RushOrders", 1) end
 	if metrics.customerType == "Influencer" and metrics.quality >= 0.85 then EventService.StartEvent("ViralPost") end
-	local profile = ProfileService.Get(player)
-	local unlocked = ProgressionService.CheckAchievements(player, { reputation = profile and profile.reputation or 1, ambience = BuildService.GetAmbience(player), expansion = profile and profile.expansion or 1 })
-	for _, text in unlocked do notifyRemote:FireClient(player, `Achievement unlocked — {text}`, true) end
 	notifyRemote:FireClient(player, staff and `Staff: {message}` or message, true)
 	pushAll()
 end
@@ -235,18 +207,13 @@ actionRemote.OnServerInvoke = function(player: Player, action: string, payload: 
 	elseif action == "EditFurniture" and type(payload) == "table" then success, message = BuildService.Edit(player, tostring(payload.edit), tostring(payload.placementId), tonumber(payload.x), tonumber(payload.z))
 	elseif action == "ExpandCafe" then success, message = BuildService.Expand(player)
 	elseif action == "ClaimChallenge" then success, message = ProgressionService.Claim(player, tostring(payload))
-	elseif action == "CreateSignature" then success, message = SignatureService.Create(player, payload)
-	elseif action == "DeleteSignature" then success, message = SignatureService.Delete(player, tostring(payload))
 	elseif action == "UpdateSetting" and type(payload) == "table" then
 		local profile = ProfileService.Get(player)
 		if profile and profile.settings[payload.key] ~= nil and type(payload.value) == "boolean" then profile.settings[payload.key] = payload.value success, message = true, "Setting updated." end
 	elseif action == "ToggleMenuItem" then
 		local profile = ProfileService.Get(player)
 		local recipeId = tostring(payload)
-		local recipe = Recipes.ById[recipeId]
-		local signatureValid = false
-		if profile then for _, signature in profile.signatureDrinks do if signature.id == recipeId then signatureValid = true break end end end
-		if profile and ((recipe and profile.level >= (recipe.unlockLevel or 1)) or signatureValid) then
+		if profile and Recipes.ById[recipeId] and profile.level >= (Recipes.ById[recipeId].unlockLevel or 1) then
 			local found
 			for index, id in profile.menu do if id == recipeId then found = index break end end
 			if found then
@@ -271,14 +238,6 @@ preparationRemote.OnServerInvoke = function(player: Player, action: string, payl
 			notifyRemote:FireClient(player, `{result.displayName} ready!`, true)
 			pushState(player)
 			if Recipes.ById[result.recipeId].category == "Affogato" then ProgressionService.Record(player, "MakeAffogato", 1) end
-			local profile = ProfileService.Get(player)
-			local category = Recipes.ById[result.recipeId].category
-			if profile and category == "Affogato" then profile.stats.Affogatos += 1 end
-			if profile and category == "Bakery" then profile.stats.BakedItems += 1 ProgressionService.Record(player, "BakeItems", 1) end
-			if profile then
-				local unlocked = ProgressionService.CheckAchievements(player, { reputation = profile.reputation, ambience = BuildService.GetAmbience(player), expansion = profile.expansion })
-				for _, text in unlocked do notifyRemote:FireClient(player, `Achievement unlocked — {text}`, true) end
-			end
 		end
 		return success, result
 	elseif action == "Cancel" then

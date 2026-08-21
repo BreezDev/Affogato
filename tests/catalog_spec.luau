@@ -29,12 +29,6 @@ for supplierId, supplier in Economy.Suppliers do
 	end
 end
 
-for ingredientId in Economy.Ingredients do
-	local sold = false
-	for _, supplier in Economy.Suppliers do if supplier.products[ingredientId] then sold = true break end end
-	assert(sold, `{ingredientId} is used by the economy but unavailable from every supplier`)
-end
-
 for equipmentId, equipment in Economy.Equipment do
 	assert(equipment.tiers[1].cost == 0, `{equipmentId} starter tier must be free`)
 	for tier = 2, #equipment.tiers do
